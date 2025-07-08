@@ -1,0 +1,24 @@
+apiVersion: v2
+name: common-tools
+description: Common tools Helm chart for VBMKTek platform (Keycloak, ELK, Grafana, etc.)
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+
+keywords:
+  - keycloak
+  - elk
+  - elasticsearch
+  - grafana
+  - prometheus
+  - monitoring
+  - security
+
+maintainers:
+  - name: VBMKTek Team
+    email: dev@vbmktek.com
+
+home: https://github.com/VBMKTek/vbmk-tek/tree/main/common-tools
+
+sources:
+  - https://github.com/VBMKTek/vbmk-tek

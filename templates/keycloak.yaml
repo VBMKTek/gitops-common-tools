@@ -1,0 +1,161 @@
+{{- if .Values.keycloak.enabled }}
+---
+# Keycloak Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: {{ .Values.global.namespace | default "common-tools" }}
+  labels:
+    {{- include "common-tools.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 1000
+      initContainers:
+      - name: wait-for-db
+        image: busybox:1.35
+        command: ['sh', '-c']
+        args:
+        - |
+          echo "Waiting for PostgreSQL to be ready..."
+          until nc -z {{ .Values.keycloak.database.host }} {{ .Values.keycloak.database.port }}; do
+            echo "Waiting for PostgreSQL..."
+            sleep 2
+          done
+          echo "PostgreSQL is ready!"
+      containers:
+      - name: keycloak
+        image: {{ .Values.keycloak.image }}
+        args:
+        - start-dev
+        - --db=postgres
+        - --db-url={{ include "common-tools.keycloak.dbUrl" . }}
+        - --db-username={{ .Values.keycloak.database.username }}
+        - --db-password=$(KC_DB_PASSWORD)
+        - --hostname-strict=false
+        - --http-enabled=true
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        - containerPort: 8443
+          name: https
+          protocol: TCP
+        - containerPort: 9000
+          name: management
+          protocol: TCP
+        env:
+        - name: KEYCLOAK_ADMIN
+          valueFrom:
+            secretKeyRef:
+              name: common-tools-secrets
+              key: keycloak-admin
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: common-tools-secrets
+              key: keycloak-admin-password
+        - name: KC_DB
+          value: {{ .Values.keycloak.env.KC_DB | quote }}
+        - name: KC_DB_URL
+          value: {{ include "common-tools.keycloak.dbUrl" . | quote }}
+        - name: KC_DB_USERNAME
+          value: {{ .Values.keycloak.database.username | quote }}
+        - name: KC_DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: common-tools-secrets
+              key: keycloak-db-password
+        - name: KC_HOSTNAME_STRICT
+          value: {{ .Values.keycloak.env.KC_HOSTNAME_STRICT | quote }}
+        - name: KC_HOSTNAME_STRICT_HTTPS
+          value: {{ .Values.keycloak.env.KC_HOSTNAME_STRICT_HTTPS | quote }}
+        - name: KC_HTTP_ENABLED
+          value: {{ .Values.keycloak.env.KC_HTTP_ENABLED | quote }}
+        - name: KC_HEALTH_ENABLED
+          value: {{ .Values.keycloak.env.KC_HEALTH_ENABLED | quote }}
+        - name: KC_METRICS_ENABLED
+          value: {{ .Values.keycloak.env.KC_METRICS_ENABLED | quote }}
+        - name: JAVA_OPTS_APPEND
+          value: "-Dkeycloak.profile.feature.upload_scripts=enabled"
+        livenessProbe:
+          httpGet:
+            path: /health/live
+            port: 8080
+          initialDelaySeconds: 120
+          timeoutSeconds: 5
+          periodSeconds: 30
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/ready
+            port: 8080
+          initialDelaySeconds: 60
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 3
+        startupProbe:
+          httpGet:
+            path: /health/started
+            port: 8080
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+          periodSeconds: 10
+          failureThreshold: 12
+        resources:
+          {{- toYaml .Values.keycloak.resources | nindent 10 }}
+        volumeMounts:
+        - name: keycloak-data
+          mountPath: /opt/keycloak/data
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: false
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: keycloak-data
+        emptyDir: {}
+
+---
+# Keycloak Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: {{ .Values.global.namespace | default "common-tools" }}
+  labels:
+    {{- include "common-tools.labels" . | nindent 4 }}
+    app.kubernetes.io/component: keycloak
+spec:
+  type: {{ .Values.keycloak.service.type }}
+  ports:
+  - port: {{ .Values.keycloak.service.port }}
+    targetPort: 8080
+    protocol: TCP
+    name: http
+    {{- if and (eq .Values.keycloak.service.type "NodePort") .Values.keycloak.service.nodePort }}
+    nodePort: {{ .Values.keycloak.service.nodePort }}
+    {{- end }}
+  - port: {{ .Values.keycloak.service.httpsPort }}
+    targetPort: 8443
+    protocol: TCP
+    name: https
+    {{- if and (eq .Values.keycloak.service.type "NodePort") .Values.keycloak.service.httpsNodePort }}
+    nodePort: {{ .Values.keycloak.service.httpsNodePort }}
+    {{- end }}
+  selector:
+    app: keycloak
+{{- end }}
