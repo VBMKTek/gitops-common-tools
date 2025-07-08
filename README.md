@@ -1,6 +1,6 @@
-# Common Tools
+# VBMKTek Common Tools
 
-This Helm chart provides common tools and utilities for the VBMKTek platform.
+This Helm chart provides common tools and utilities for the VBMKTek platform including Keycloak, ELK Stack, Grafana, Prometheus and other monitoring/authentication tools.
 
 ## Components
 
