@@ -52,6 +52,30 @@ keycloak:
     KC_HEALTH_ENABLED: "true"
     KC_METRICS_ENABLED: "true"
     KC_DB: "postgres"
+    KC_HTTP_RELATIVE_PATH: "/kc-common"
+    KC_HOSTNAME_PATH: "/kc-common"
+    KC_HOSTNAME_URL: "http://119.9.70.83/kc-common"
+    KC_HOSTNAME_ADMIN_URL: "http://119.9.70.83/kc-common"
+    KC_PROXY: "edge"
+    KC_PROXY_ADDRESS_FORWARDING: "true"
+    KC_SPI_TRUSTSTORE_FILE_FILE: ""
+    KC_SPI_TRUSTSTORE_FILE_PASSWORD: ""
+    # Additional HTTPS bypass settings
+    KC_HOSTNAME_STRICT_BACKCHANNEL: "false"
+    KC_SPI_HOSTNAME_DEFAULT_FRONTEND_URL: "http://119.9.70.83/kc-common"
+    KC_SPI_HOSTNAME_DEFAULT_ADMIN_URL: "http://119.9.70.83/kc-common"
+    # Disable SSL requirements completely
+    KC_SPI_LOGIN_PROTOCOL_OPENID_CONNECT_LEGACY_LOGOUT_REDIRECT_URI: "true"
+    KC_SPI_TRUSTSTORE_FILE_FILE: ""
+    KC_SPI_TRUSTSTORE_FILE_PASSWORD: ""
+    KC_SPI_X509CERT_LOOKUP_PROVIDER: "default"
+    # Force disable HTTPS requirement for realms  
+    KC_SPI_CONNECTIONS_HTTP_CLIENT_DEFAULT_DISABLE_HOSTNAME_VERIFICATION: "true"
+    KC_SPI_TRUSTSTORE_FILE_FILE: ""
+    KC_SPI_TRUSTSTORE_FILE_PASSWORD: ""
+    # Force disable SSL requirement for all realms (override realm settings)
+    QUARKUS_HTTP_INSECURE_REQUESTS: "enabled"
+    KC_SPI_REALM_RESTAPI_EXTENSION_V1_REQUIRE_SSL: "false"
   
   # Database configuration (uses PostgreSQL from core-infra)
   database:
