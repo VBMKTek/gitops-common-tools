@@ -39,7 +39,7 @@ spec:
       - name: keycloak
         image: {{ .Values.keycloak.image }}
         args:
-        - start-dev
+        - start
         - --db=postgres
         - --db-url={{ include "common-tools.keycloak.dbUrl" . }}
         - --db-username={{ .Values.keycloak.database.username }}
