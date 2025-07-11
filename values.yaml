@@ -25,7 +25,7 @@ global:
 # Keycloak - Identity and Access Management
 keycloak:
   enabled: true
-  image: "quay.io/keycloak/keycloak:23.0"
+  image: "bitnami/keycloak:latest"
   
   service:
     type: NodePort
