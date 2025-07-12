@@ -33,6 +33,8 @@ keycloak:
     nodePort: 30180
     httpsPort: 8443
     httpsNodePort: 30543
+    managementPort: 9000
+    managementNodePort: 30900
   
   resources:
     requests:

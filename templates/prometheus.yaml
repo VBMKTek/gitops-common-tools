@@ -19,11 +19,12 @@ data:
       - job_name: 'prometheus'
         static_configs:
           - targets: ['localhost:9090']
+        metrics_path: '/prometheus'
       
       - job_name: 'keycloak'
         static_configs:
           - targets: ['keycloak:9000']
-        metrics_path: '/q/metrics'
+        metrics_path: '/kc-common/metrics'
       
       - job_name: 'postgres-exporter'
         static_configs:

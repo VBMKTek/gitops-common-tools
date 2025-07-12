@@ -207,6 +207,13 @@ spec:
     {{- if and (eq .Values.keycloak.service.type "NodePort") .Values.keycloak.service.httpsNodePort }}
     nodePort: {{ .Values.keycloak.service.httpsNodePort }}
     {{- end }}
+  - port: {{ .Values.keycloak.service.managementPort }}
+    targetPort: 9000
+    protocol: TCP
+    name: management
+    {{- if and (eq .Values.keycloak.service.type "NodePort") .Values.keycloak.service.managementNodePort }}
+    nodePort: {{ .Values.keycloak.service.managementNodePort }}
+    {{- end }}
   selector:
     app: keycloak
 {{- end }}
