@@ -45,8 +45,8 @@ spec:
         - --db-username={{ .Values.keycloak.database.username }}
         - --db-password=$(KC_DB_PASSWORD)
         - --hostname-strict=false
-        - --hostname-strict-https=false
         - --http-enabled=true
+        - --health-enabled=true
         - --spi-login-protocol-openid-connect-legacy-logout-redirect-uri=true
         - --spi-x509cert-lookup-provider=default
         ports:
@@ -143,25 +143,25 @@ spec:
           value: {{ .Values.keycloak.env.KC_SPI_REALM_RESTAPI_EXTENSION_V1_REQUIRE_SSL | quote }}
         livenessProbe:
           httpGet:
-            path: /health/live
+            path: {{ .Values.keycloak.env.KC_HTTP_RELATIVE_PATH }}/health/live
             port: 9000
-          initialDelaySeconds: 120
+          initialDelaySeconds: 180
           timeoutSeconds: 5
           periodSeconds: 30
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: /health/ready
+            path: {{ .Values.keycloak.env.KC_HTTP_RELATIVE_PATH }}/health/ready
             port: 9000
-          initialDelaySeconds: 60
+          initialDelaySeconds: 180
           timeoutSeconds: 5
           periodSeconds: 10
           failureThreshold: 3
         startupProbe:
           httpGet:
-            path: /health/started
+            path: {{ .Values.keycloak.env.KC_HTTP_RELATIVE_PATH }}/health/started
             port: 9000
-          initialDelaySeconds: 30
+          initialDelaySeconds: 180
           timeoutSeconds: 5
           periodSeconds: 10
           failureThreshold: 12
