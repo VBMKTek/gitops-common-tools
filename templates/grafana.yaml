@@ -1,0 +1,170 @@
+﻿{{- if .Values.grafana.enabled }}
+---
+# Grafana Deployment
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: {{ .Values.global.namespace | default "common-tools" }}
+  labels:
+    {{- include "common-tools.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      securityContext:
+        runAsUser: 472
+        runAsGroup: 472
+        fsGroup: 472
+      initContainers:
+      - name: fix-permissions
+        image: busybox:latest
+        command: ['sh', '-c', 'chown -R 472:472 /var/lib/grafana || true']
+        volumeMounts:
+        {{- if .Values.grafana.persistence.enabled }}
+        - name: grafana-storage
+          mountPath: /var/lib/grafana
+        {{- end }}
+        securityContext:
+          runAsUser: 0
+      containers:
+      - name: grafana
+        image: {{ .Values.grafana.image }}
+        ports:
+        - containerPort: 3000
+          name: grafana
+        securityContext:
+          runAsUser: 472
+          runAsGroup: 472
+        env:
+        - name: GF_SECURITY_ADMIN_USER
+          value: {{ .Values.grafana.env.GF_SECURITY_ADMIN_USER | quote }}
+        - name: GF_SECURITY_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: common-tools-secrets
+              key: grafana-admin-password
+        - name: GF_USERS_ALLOW_SIGN_UP
+          value: {{ .Values.grafana.env.GF_USERS_ALLOW_SIGN_UP | quote }}
+        - name: GF_SERVER_SERVE_FROM_SUB_PATH
+          value: "true"
+        - name: GF_SERVER_ROOT_URL
+          value: "%(protocol)s://%(domain)s:%(http_port)s/grafana/"
+        volumeMounts:
+        {{- if .Values.grafana.persistence.enabled }}
+        - name: grafana-storage
+          mountPath: /var/lib/grafana
+        {{- end }}
+        - name: grafana-datasources
+          mountPath: /etc/grafana/provisioning/datasources
+        - name: grafana-dashboards
+          mountPath: /etc/grafana/provisioning/dashboards
+        resources:
+          {{- toYaml .Values.grafana.resources | nindent 10 }}
+      volumes:
+      {{- if .Values.grafana.persistence.enabled }}
+      - name: grafana-storage
+        persistentVolumeClaim:
+          claimName: grafana-pvc
+      {{- end }}
+      - name: grafana-datasources
+        configMap:
+          name: grafana-datasources
+      - name: grafana-dashboards
+        configMap:
+          name: grafana-dashboards
+
+---
+# Grafana Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: {{ .Values.global.namespace | default "common-tools" }}
+  labels:
+    {{- include "common-tools.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+spec:
+  type: {{ .Values.grafana.service.type }}
+  ports:
+  - port: {{ .Values.grafana.service.port }}
+    targetPort: 3000
+    protocol: TCP
+    name: grafana
+    {{- if and (eq .Values.grafana.service.type "NodePort") .Values.grafana.service.nodePort }}
+    nodePort: {{ .Values.grafana.service.nodePort }}
+    {{- end }}
+  selector:
+    app: grafana
+
+---
+# Grafana Datasources ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: {{ .Values.global.namespace | default "common-tools" }}
+  labels:
+    {{- include "common-tools.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+data:
+  prometheus.yaml: |-
+    apiVersion: 1
+    datasources:
+    - name: Prometheus
+      type: prometheus
+      url: http://prometheus:9090/prometheus
+      access: proxy
+      isDefault: true
+
+---
+# Grafana Dashboards ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-dashboards
+  namespace: {{ .Values.global.namespace | default "common-tools" }}
+  labels:
+    {{- include "common-tools.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+data:
+  dashboard.yaml: |-
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      updateIntervalSeconds: 10
+      allowUiUpdates: true
+      options:
+        path: /etc/grafana/provisioning/dashboards
+
+{{- if .Values.grafana.persistence.enabled }}
+---
+# Grafana PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: grafana-pvc
+  namespace: {{ .Values.global.namespace | default "common-tools" }}
+  labels:
+    {{- include "common-tools.labels" . | nindent 4 }}
+    app.kubernetes.io/component: grafana
+spec:
+  accessModes:
+    - {{ .Values.global.storage.accessMode }}
+  storageClassName: {{ .Values.global.storage.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.grafana.persistence.size }}
+{{- end }}
+{{- end }}

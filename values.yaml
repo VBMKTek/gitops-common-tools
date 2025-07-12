@@ -137,8 +137,9 @@ kibana:
     SERVER_HOST: "0.0.0.0"
 
 # Grafana - Monitoring and Observability
+# Grafana - Monitoring and Observability
 grafana:
-  enabled: false  # Will enable later
+  enabled: true
   image: "grafana/grafana:10.2.0"
   
   service:
@@ -164,10 +165,13 @@ grafana:
     GF_SECURITY_ADMIN_USER: "admin"
     GF_SECURITY_ADMIN_PASSWORD: "changeme"
     GF_USERS_ALLOW_SIGN_UP: "false"
+    # Add these for sub-path support
+    GF_SERVER_ROOT_URL: "http://119.9.70.83/grafana"
+    GF_SERVER_SERVE_FROM_SUB_PATH: "true"
 
 # Prometheus - Metrics Collection
 prometheus:
-  enabled: false  # Will enable later
+  enabled: true  # Will enable later
   image: "prom/prometheus:v2.47.0"
   
   service:
@@ -188,6 +192,50 @@ prometheus:
     limits:
       memory: "2Gi"
       cpu: "1000m"
+
+# Database Exporters for Monitoring
+exporters:
+  # PostgreSQL Exporter
+  postgres:
+    enabled: true
+    image: "prometheuscommunity/postgres-exporter:v0.13.2"
+    
+    service:
+      type: ClusterIP
+      port: 9187
+    
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+    
+    # Connection to PostgreSQL in core-infra namespace
+    env:
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@postgres.core-infra.svc.cluster.local:5432/postgres?sslmode=disable"
+  
+  # MongoDB Exporter  
+  mongodb:
+    enabled: true
+    image: "percona/mongodb_exporter:0.39.0"
+    
+    service:
+      type: ClusterIP
+      port: 9216
+    
+    resources:
+      requests:
+        memory: "64Mi"
+        cpu: "50m"
+      limits:
+        memory: "128Mi"
+        cpu: "100m"
+    
+    # Connection to MongoDB in core-infra namespace
+    env:
+      MONGODB_URI: "mongodb://mongodb.core-infra.svc.cluster.local:27017"
 
 # Secret Management for Common Tools
 secrets:

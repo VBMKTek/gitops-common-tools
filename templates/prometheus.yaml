@@ -1,0 +1,160 @@
+﻿{{- if .Values.prometheus.enabled }}
+---
+# Prometheus ConfigMap
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: {{ .Values.global.namespace | default "common-tools" }}
+  labels:
+    {{- include "common-tools.labels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+      evaluation_interval: 15s
+    
+    scrape_configs:
+      - job_name: 'prometheus'
+        static_configs:
+          - targets: ['localhost:9090']
+      
+      - job_name: 'keycloak'
+        static_configs:
+          - targets: ['keycloak:9000']
+        metrics_path: '/q/metrics'
+      
+      - job_name: 'postgres-exporter'
+        static_configs:
+          - targets: ['postgres-exporter:9187']
+      
+      - job_name: 'mongodb-exporter'
+        static_configs:
+          - targets: ['mongodb-exporter:9216']
+
+---
+# Prometheus Deployment  
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: {{ .Values.global.namespace | default "common-tools" }}
+  labels:
+    {{- include "common-tools.labels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus
+  template:
+    metadata:
+      labels:
+        app: prometheus
+    spec:
+      securityContext:
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+      initContainers:
+      - name: fix-permissions
+        image: busybox:latest
+        command: ['sh', '-c', 'chown -R 65534:65534 /prometheus || true']
+        volumeMounts:
+        {{- if .Values.prometheus.persistence.enabled }}
+        - name: prometheus-storage
+          mountPath: /prometheus
+        {{- else }}
+        - name: prometheus-storage-volume
+          mountPath: /prometheus
+        {{- end }}
+        securityContext:
+          runAsUser: 0
+      containers:
+      - name: prometheus
+        image: {{ .Values.prometheus.image }}
+        ports:
+        - containerPort: 9090
+          name: web
+        securityContext:
+          runAsUser: 65534
+          runAsGroup: 65534
+        args:
+          - '--config.file=/etc/prometheus/prometheus.yml'
+          - '--storage.tsdb.path=/prometheus/'
+          - '--web.console.libraries=/etc/prometheus/console_libraries'
+          - '--web.console.templates=/etc/prometheus/consoles'
+          - '--storage.tsdb.retention.time=200h'
+          - '--web.enable-lifecycle'
+          - '--web.route-prefix=/prometheus'
+          - '--web.external-url=/prometheus'
+        volumeMounts:
+        - name: prometheus-config-volume
+          mountPath: /etc/prometheus/
+        {{- if .Values.prometheus.persistence.enabled }}
+        - name: prometheus-storage
+          mountPath: /prometheus
+        {{- else }}
+        - name: prometheus-storage-volume
+          mountPath: /prometheus
+        {{- end }}
+        resources:
+          {{- toYaml .Values.prometheus.resources | nindent 10 }}
+      volumes:
+      - name: prometheus-config-volume
+        configMap:
+          defaultMode: 420
+          name: prometheus-config
+      {{- if .Values.prometheus.persistence.enabled }}
+      - name: prometheus-storage
+        persistentVolumeClaim:
+          claimName: prometheus-pvc
+      {{- else }}
+      - name: prometheus-storage-volume
+        emptyDir: {}
+      {{- end }}
+
+---
+# Prometheus Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: {{ .Values.global.namespace | default "common-tools" }}
+  labels:
+    {{- include "common-tools.labels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus
+spec:
+  type: {{ .Values.prometheus.service.type }}
+  ports:
+  - port: {{ .Values.prometheus.service.port }}
+    targetPort: 9090
+    protocol: TCP
+    name: web
+    {{- if and (eq .Values.prometheus.service.type "NodePort") .Values.prometheus.service.nodePort }}
+    nodePort: {{ .Values.prometheus.service.nodePort }}
+    {{- end }}
+  selector:
+    app: prometheus
+
+{{- if .Values.prometheus.persistence.enabled }}
+---
+# Prometheus PVC
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: prometheus-pvc
+  namespace: {{ .Values.global.namespace | default "common-tools" }}
+  labels:
+    {{- include "common-tools.labels" . | nindent 4 }}
+    app.kubernetes.io/component: prometheus
+spec:
+  accessModes:
+    - {{ .Values.global.storage.accessMode }}
+  storageClassName: {{ .Values.global.storage.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.prometheus.persistence.size }}
+{{- end }}
+{{- end }}
