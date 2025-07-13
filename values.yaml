@@ -237,7 +237,7 @@ exporters:
     
     # Connection to MongoDB in core-infra namespace
     env:
-      MONGODB_URI: "mongodb://mongodb.core-infra.svc.cluster.local:27017"
+      MONGODB_URI: "mongodb://root:changeme@mongodb.core-infra.svc.cluster.local:27017"
 
 # Secret Management for Common Tools
 secrets:
