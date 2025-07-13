@@ -195,6 +195,71 @@ prometheus:
       memory: "2Gi"
       cpu: "1000m"
 
+# ArgoCD - GitOps Continuous Delivery
+argocd:
+  enabled: true
+  image: "quay.io/argoproj/argocd:v2.10.0"
+  
+  service:
+    type: NodePort
+    port: 8080
+    nodePort: 30280
+    grpcPort: 443
+    grpcNodePort: 30443
+  
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: "ssd"
+    accessMode: ReadWriteOnce
+  
+  resources:
+    server:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+    controller:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "2Gi"
+        cpu: "1000m"
+    repoServer:
+      requests:
+        memory: "512Mi"
+        cpu: "250m"
+      limits:
+        memory: "1Gi"
+        cpu: "500m"
+    dex:
+      requests:
+        memory: "128Mi"
+        cpu: "100m"
+      limits:
+        memory: "256Mi"
+        cpu: "200m"
+    redis:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "200m"
+  
+  env:
+    # Server configuration
+    ARGOCD_SERVER_INSECURE: "true"
+    ARGOCD_SERVER_ROOT_PATH: "/argocd"
+    ARGOCD_SERVER_BASE_HREF: "/argocd"
+    # Initial admin password (change after first login)
+    ARGOCD_ADMIN_PASSWORD: "changeme123"
+    # Redis configuration
+    REDIS_PASSWORD: "changeme"
+
 # Database Exporters for Monitoring
 exporters:
   # PostgreSQL Exporter
@@ -250,9 +315,12 @@ secrets:
     keycloakDbPassword: "changeme"
     grafanaAdmin: "admin"
     grafanaAdminPassword: "changeme"
+    argoCDAdmin: "admin"
+    argoCDAdminPassword: "changeme123"
   
   # Connection strings
   connections:
     keycloakDbUri: "postgresql://keycloak:changeme@postgres.core-infra.svc.cluster.local:5432/keycloak"
     elasticsearchUri: "http://elasticsearch:9200"
     prometheusUri: "http://prometheus:9090"
+    argoCDUri: "http://argocd-server:8080"

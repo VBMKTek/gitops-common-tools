@@ -19,7 +19,7 @@ data:
       - job_name: 'prometheus'
         static_configs:
           - targets: ['localhost:9090']
-        metrics_path: '/prometheus'
+        metrics_path: '/prometheus/metrics'
       
       - job_name: 'keycloak'
         static_configs:
@@ -28,11 +28,18 @@ data:
       
       - job_name: 'postgres-exporter'
         static_configs:
-          - targets: ['postgres-exporter:9187']
+          - targets: ['postgres-exporter.core-infra.svc.cluster.local:9187']
+        metrics_path: '/metrics'
       
       - job_name: 'mongodb-exporter'
         static_configs:
-          - targets: ['mongodb-exporter:9216']
+          - targets: ['mongodb-exporter.core-infra.svc.cluster.local:9216']
+        metrics_path: '/metrics'
+      
+      - job_name: 'redis-exporter'
+        static_configs:
+          - targets: ['redis-exporter.core-infra.svc.cluster.local:9121']
+        metrics_path: '/metrics'
 
 ---
 # Prometheus Deployment  
