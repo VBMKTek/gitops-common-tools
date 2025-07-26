@@ -39,7 +39,7 @@ spec:
       - name: keycloak
         image: {{ .Values.keycloak.image }}
         args:
-        - start
+        - start-dev
         - --db=postgres
         - --db-url={{ include "common-tools.keycloak.dbUrl" . }}
         - --db-username={{ .Values.keycloak.database.username }}
@@ -83,8 +83,6 @@ spec:
               key: keycloak-db-password
         - name: KC_HOSTNAME_STRICT
           value: {{ .Values.keycloak.env.KC_HOSTNAME_STRICT | quote }}
-        - name: KC_HOSTNAME_STRICT_HTTPS
-          value: {{ .Values.keycloak.env.KC_HOSTNAME_STRICT_HTTPS | quote }}
         - name: KC_HTTP_ENABLED
           value: {{ .Values.keycloak.env.KC_HTTP_ENABLED | quote }}
         - name: KC_HEALTH_ENABLED
@@ -143,28 +141,28 @@ spec:
           value: {{ .Values.keycloak.env.KC_SPI_REALM_RESTAPI_EXTENSION_V1_REQUIRE_SSL | quote }}
         livenessProbe:
           httpGet:
-            path: {{ .Values.keycloak.env.KC_HTTP_RELATIVE_PATH }}/health/live
-            port: 9000
-          initialDelaySeconds: 180
-          timeoutSeconds: 5
+            path: /kc-common/health
+            port: 8080
+          initialDelaySeconds: 300
+          timeoutSeconds: 10
           periodSeconds: 30
           failureThreshold: 3
         readinessProbe:
           httpGet:
-            path: {{ .Values.keycloak.env.KC_HTTP_RELATIVE_PATH }}/health/ready
-            port: 9000
+            path: /kc-common/health
+            port: 8080
           initialDelaySeconds: 180
-          timeoutSeconds: 5
-          periodSeconds: 10
-          failureThreshold: 3
+          timeoutSeconds: 10
+          periodSeconds: 15
+          failureThreshold: 5
         startupProbe:
           httpGet:
-            path: {{ .Values.keycloak.env.KC_HTTP_RELATIVE_PATH }}/health/started
-            port: 9000
-          initialDelaySeconds: 180
-          timeoutSeconds: 5
-          periodSeconds: 10
-          failureThreshold: 12
+            path: /kc-common/health
+            port: 8080
+          initialDelaySeconds: 60
+          timeoutSeconds: 10
+          periodSeconds: 15
+          failureThreshold: 20
         resources:
           {{- toYaml .Values.keycloak.resources | nindent 10 }}
         volumeMounts:
@@ -206,13 +204,6 @@ spec:
     name: https
     {{- if and (eq .Values.keycloak.service.type "NodePort") .Values.keycloak.service.httpsNodePort }}
     nodePort: {{ .Values.keycloak.service.httpsNodePort }}
-    {{- end }}
-  - port: {{ .Values.keycloak.service.managementPort }}
-    targetPort: 9000
-    protocol: TCP
-    name: management
-    {{- if and (eq .Values.keycloak.service.type "NodePort") .Values.keycloak.service.managementNodePort }}
-    nodePort: {{ .Values.keycloak.service.managementNodePort }}
     {{- end }}
   selector:
     app: keycloak
